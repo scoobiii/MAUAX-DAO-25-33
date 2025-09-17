@@ -43,8 +43,14 @@ const generateInstallations = (): Installation[] => {
     const targetCount = 400; // Increased sample size for better representation
     let instId = 0;
     
-    const mauaCenter = { lat: -23.6675, lng: -46.4608 };
-    const radius = 0.05; // Approx 5km radius
+    // Define some cluster centers to simulate neighborhoods in Mauá
+    const clusters = [
+        { lat: -23.6675, lng: -46.4608 }, // Center
+        { lat: -23.68, lng: -46.45 },   // Southeast
+        { lat: -23.65, lng: -46.47 },   // Northwest
+        { lat: -23.66, lng: -46.44 },   // East
+    ];
+    const clusterRadius = 0.015; // Radius for points around a cluster center
 
     sectorData.forEach(sector => {
         const count = Math.max(1, Math.round((sector.edificios / totalEdificios) * targetCount));
@@ -62,8 +68,17 @@ const generateInstallations = (): Installation[] => {
             // Simplified ROI: higher efficiency and lower age -> better ROI.
             const roi = 7 + (efficiency - 16) / 6 * 10 - age / 2; // ROI between ~2% and 17%
 
-            const lat = mauaCenter.lat + (Math.random() - 0.5) * radius * 2;
-            const lng = mauaCenter.lng + (Math.random() - 0.5) * radius * 2;
+            // Pick a random cluster
+            const cluster = clusters[Math.floor(Math.random() * clusters.length)];
+
+            // Generate a point around the cluster center using a normal-like distribution (Box-Muller transform)
+            const u1 = Math.random();
+            const u2 = Math.random();
+            const randStdNormal1 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+            const randStdNormal2 = Math.sqrt(-2.0 * Math.log(u1)) * Math.sin(2.0 * Math.PI * u2);
+            
+            const lat = cluster.lat + randStdNormal1 * clusterRadius * 0.5;
+            const lng = cluster.lng + randStdNormal2 * clusterRadius * 0.5;
 
             installations.push({
                 id: `inst-${instId++}`,
