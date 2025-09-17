@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     ResponsiveContainer,
     ComposedChart,
@@ -21,21 +21,57 @@ interface ProjectionsTabProps {
 
 const ProjectionsTab: React.FC<ProjectionsTabProps> = ({ chartData }) => {
     const { annualProjections } = chartData;
+    const [timeRange, setTimeRange] = useState<'max' | '5y'>('max');
+
+    const filteredProjections = useMemo(() => {
+        if (!annualProjections) return [];
+        switch (timeRange) {
+            case '5y':
+                return annualProjections.slice(-5);
+            case 'max':
+            default:
+                return annualProjections;
+        }
+    }, [annualProjections, timeRange]);
 
     if (!annualProjections || annualProjections.length === 0) {
         return <p>Dados de projeção não disponíveis.</p>;
     }
 
+    const TimeRangeSelector = (
+        <div className="flex space-x-1 bg-gray-200 dark:bg-gray-700 p-1 rounded-lg">
+            <button
+                onClick={() => setTimeRange('5y')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                    timeRange === '5y' ? 'bg-white dark:bg-dark-card shadow' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
+            >
+                Últimos 5 Anos
+            </button>
+            <button
+                onClick={() => setTimeRange('max')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                    timeRange === 'max' ? 'bg-white dark:bg-dark-card shadow' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
+            >
+                Período Completo
+            </button>
+        </div>
+    );
+
     return (
         <section>
-            <h2 className="text-2xl font-bold flex items-center mb-6">
-                <ChartLineIcon className="w-6 h-6 mr-3" />
-                Projeções Anuais (2023-2033)
-            </h2>
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+                <h2 className="text-2xl font-bold flex items-center">
+                    <ChartLineIcon className="w-6 h-6 mr-3" />
+                    Projeções Anuais (2023-2033)
+                </h2>
+                {TimeRangeSelector}
+            </div>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                 <ChartCard title="Projeção de Geração e Consumo de Energia" chartHeight="h-96">
                     <ResponsiveContainer>
-                        <ComposedChart data={annualProjections}>
+                        <ComposedChart data={filteredProjections}>
                             <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
                             <XAxis dataKey="year" stroke="currentColor" />
                             <YAxis stroke="currentColor" unit=" GWh" />
@@ -53,14 +89,14 @@ const ProjectionsTab: React.FC<ProjectionsTabProps> = ({ chartData }) => {
 
                 <ChartCard title="Projeção de Indicadores Socioeconômicos" chartHeight="h-96">
                     <ResponsiveContainer>
-                        <ComposedChart data={annualProjections}>
+                        <ComposedChart data={filteredProjections}>
                             <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
                             <XAxis dataKey="year" stroke="currentColor" />
                             <YAxis
                                 yAxisId="left"
                                 orientation="left"
                                 stroke="#48bb78"
-                                unit=" USD"
+                                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
                                 label={{ value: 'PIB per Capita (USD)', angle: -90, position: 'insideLeft', fill: '#48bb78' }}
                             />
                             <YAxis

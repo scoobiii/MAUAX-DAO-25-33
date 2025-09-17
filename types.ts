@@ -77,7 +77,7 @@ export interface ChartData {
     weather: { time: string; irradiacao: number, temp: number }[];
     annualProjections: AnnualProjection[];
     energyMix: { name: string, value: number, fill: string }[];
-    energyPrediction: { time: string; solar: number; thermal: number; hydro: number; battery: number; eolica: number; }[];
+    energyPrediction: { time: string; solar: number; thermal: number; hydro: number; battery: number; eolica: number; nuclear: number; }[];
     demandPrediction: { time: string, value: number }[];
     sevenDayForecast: { day: string; geracaoPrevista: number; irradiacao: number, temp: number }[];
 }

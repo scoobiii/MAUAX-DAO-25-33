@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Kpi, Alert, Phase, Installation, CryptoAccount, ChartData, EnergySource, DataSource, AnnualProjection } from '../types';
-import { SolarPanelIcon, BoltIcon, ChartLineIcon, BrainIcon, SunIcon, FireIcon, WaterIcon, BatteryIcon, WindIcon } from '../components/icons';
+import { SolarPanelIcon, BoltIcon, ChartLineIcon, BrainIcon, SunIcon, FireIcon, WaterIcon, BatteryIcon, WindIcon, NuclearIcon } from '../components/icons';
 
 const generateInstallations = (): Installation[] => {
     const sectorData = [
@@ -148,6 +148,24 @@ const generateAnnualProjections = (): AnnualProjection[] => {
 
 
 const generateDaoData = () => {
+    const installations = generateInstallations();
+    
+    // Find an installation with high OPEX to generate an alert
+    const highOpexInstallation = [...installations].sort((a, b) => b.opex - a.opex)[0];
+
+    const alerts: Alert[] = [
+        { id: 1, type: 'info', message: 'Manutenção programada para o setor B2 em 24h.', timestamp: 'há 2 minutos' },
+        { id: 2, type: 'warning', message: 'Irradiação solar abaixo do esperado no setor industrial de Capuava.', timestamp: 'há 15 minutos' },
+    ];
+
+    if (highOpexInstallation) {
+        alerts.push({
+            id: 3,
+            type: 'critical',
+            message: `OPEX projetado acima do limite para a instalação ${highOpexInstallation.id}. Ação recomendada.`,
+            timestamp: 'agora'
+        });
+    }
 
     return {
         kpis: [
@@ -156,17 +174,14 @@ const generateDaoData = () => {
             { id: 3, title: 'ROI do Projeto', value: '15,2', unit: '%', change: '-0.1%', changeType: 'decrease', icon: ChartLineIcon },
             { id: 4, title: 'Otimização IA', value: '98,9', unit: '%', change: '+1.1%', changeType: 'increase', icon: BrainIcon },
         ] as Kpi[],
-        alerts: [
-            { id: 1, type: 'info', message: 'Manutenção programada para o setor B2 em 24h.', timestamp: 'há 2 minutos' },
-            { id: 2, type: 'warning', message: 'Irradiação solar abaixo do esperado no setor industrial de Capuava.', timestamp: 'há 15 minutos' },
-        ] as Alert[],
+        alerts: alerts,
         phases: [
             { id: 1, title: 'Fase 1: Piloto', status: 'Concluída', progress: 100 },
             { id: 2, title: 'Fase 2: Expansão A', status: 'Em Andamento', progress: 75 },
             { id: 3, title: 'Fase 3: Expansão B', status: 'Em Andamento', progress: 30 },
             { id: 4, title: 'Otimização', status: 'Planejada', progress: 0 },
         ] as Phase[],
-        installations: generateInstallations(),
+        installations: installations,
         cryptoAccounts: [
             { id: 'acc-1', name: 'Reserva de Tesouraria', balance: '1,250,000 MEX', address: '0x1A...fE3d' },
             { id: 'acc-2', name: 'Fundo de Manutenção', balance: '450,000 MEX', address: '0x2B...gH4f' },
@@ -195,7 +210,7 @@ const generateDaoData = () => {
                 let thermal = 10 + Math.random() * 10;
                 if (i >= 18 && i <= 21) { thermal = 250 + (Math.random()) * 50; }
                 const battery = (i >= 18 && i <= 22) ? 25 + (Math.random() - 0.5) * 10 : 0;
-                return { time: `${i}:00`, solar: Math.max(0, solar), thermal: Math.max(0, thermal), hydro: Math.max(0, hydro), battery: Math.max(0, battery), eolica: Math.max(0, eolica) };
+                return { time: `${i}:00`, solar: Math.max(0, solar), thermal: Math.max(0, thermal), hydro: Math.max(0, hydro), battery: Math.max(0, battery), eolica: Math.max(0, eolica), nuclear: 0 };
             }),
             demandPrediction: Array.from({ length: 24 }, (_, i) => {
                 const baseDemand = 1000;
@@ -219,15 +234,16 @@ const generateSinData = () => { // Used as a fallback if API fails
         kpis: [
             { id: 1, title: 'Carga do SIN', value: '75,3', unit: 'GW', change: '+1.8%', changeType: 'increase', icon: BoltIcon },
             { id: 2, title: 'Geração Hidro', value: '45,1', unit: 'GW', change: '-0.5%', changeType: 'decrease', icon: WaterIcon },
-            { id: 3, title: 'CMO (Sudeste)', value: '180,5', unit: 'R$/MWh', change: '+3.2%', changeType: 'increase', icon: ChartLineIcon },
+            { id: 3, title: 'Geração Térmica/Nuclear', value: '18,5', unit: 'GW', change: '+3.2%', changeType: 'increase', icon: FireIcon },
             { id: 4, title: 'Geração Solar/Eólica', value: '15,2', unit: 'GW', change: '+4.5%', changeType: 'increase', icon: SunIcon },
         ] as Kpi[],
         alerts: [{ id: 1, type: 'critical', message: 'Falha ao carregar dados do ONS. Exibindo dados de exemplo.', timestamp: 'agora' },] as Alert[],
         phases: [], installations: [], cryptoAccounts: [],
         energySources: [
-            { name: 'Hidrelétrica', capacity: '109 GW', percentage: 60, icon: WaterIcon, color: 'text-blue-500' },
-            { name: 'Eólica + Solar', capacity: '36 GW', percentage: 20, icon: SunIcon, color: 'text-yellow-400' },
-            { name: 'Térmica (Total)', capacity: '27 GW', percentage: 15, icon: FireIcon, color: 'text-orange-500' },
+            { name: 'Hidrelétrica', capacity: '109 GW', percentage: 58, icon: WaterIcon, color: 'text-blue-500' },
+            { name: 'Eólica + Solar', capacity: '38 GW', percentage: 20, icon: SunIcon, color: 'text-yellow-400' },
+            { name: 'Térmica', capacity: '28 GW', percentage: 15, icon: FireIcon, color: 'text-orange-500' },
+            { name: 'Nuclear', capacity: '2 GW', percentage: 1, icon: NuclearIcon, color: 'text-purple-500' },
             { name: 'Outras', capacity: '9 GW', percentage: 5, icon: BoltIcon, color: 'text-green-500' }
         ] as EnergySource[],
         chartData: {
@@ -236,7 +252,7 @@ const generateSinData = () => { // Used as a fallback if API fails
             prices: Array.from({ length: 12 }, (_, i) => ({ time: `${i * 2}:00`, price: 150 + Math.random() * 50 })),
             weather: [],
             annualProjections: [],
-            energyMix: [{ name: 'Hidro', value: 60, fill: '#3b82f6' }, { name: 'Eólica/Solar', value: 20, fill: '#facc15' }, { name: 'Térmica', value: 15, fill: '#f97316' }, { name: 'Outras', value: 5, fill: '#22c55e' }],
+            energyMix: [{ name: 'Hidro', value: 58, fill: '#3b82f6' }, { name: 'Eólica/Solar', value: 20, fill: '#facc15' }, { name: 'Térmica', value: 15, fill: '#f97316' }, { name: 'Nuclear', value: 1, fill: '#a855f7'}, { name: 'Outras', value: 5, fill: '#22c55e' }],
             energyPrediction: [], demandPrediction: [], sevenDayForecast: [],
         } as ChartData,
     };
@@ -271,9 +287,10 @@ const fetchSinData = async () => {
     const hourlyData: { [time: string]: any } = {};
     genJson.result.records.forEach((r:any) => {
         const time = r.din_instante;
-        if (!hourlyData[time]) hourlyData[time] = { hydro: 0, thermal: 0, solar: 0, eolica: 0 };
+        if (!hourlyData[time]) hourlyData[time] = { hydro: 0, thermal: 0, solar: 0, eolica: 0, nuclear: 0 };
         hourlyData[time].hydro += r.val_geracao_hidraulica || 0;
-        hourlyData[time].thermal += (r.val_geracao_termica || 0) + (r.val_geracao_nuclear || 0);
+        hourlyData[time].thermal += (r.val_geracao_termica || 0);
+        hourlyData[time].nuclear += (r.val_geracao_nuclear || 0);
         hourlyData[time].solar += r.val_geracao_solar || 0;
         hourlyData[time].eolica += r.val_geracao_eolica || 0;
     });
@@ -293,7 +310,7 @@ const fetchSinData = async () => {
         const data = hourlyData[time];
         return {
             time: `${new Date(time).getHours()}:00`,
-            geracao: (data.hydro || 0) + (data.thermal || 0) + (data.solar || 0) + (data.eolica || 0),
+            geracao: (data.hydro || 0) + (data.thermal || 0) + (data.solar || 0) + (data.eolica || 0) + (data.nuclear || 0),
             demanda: data.demand, price: data.price, ...data
         }
     }).filter(d => d.demanda && d.geracao > 0);
@@ -304,30 +321,44 @@ const fetchSinData = async () => {
     const totalGeneration = latestData.geracao;
     const hydroGeneration = latestData.hydro;
     const solarEolicaGeneration = latestData.solar + latestData.eolica;
+    const thermalNuclearGeneration = latestData.thermal + latestData.nuclear;
 
     const toGW = (val:number) => (val / 1000).toFixed(1).replace('.', ',');
 
     const kpis: Kpi[] = [
         { id: 1, title: 'Carga do SIN', value: toGW(latestData.demanda), unit: 'GW', change: '', changeType: 'increase', icon: BoltIcon },
         { id: 2, title: 'Geração Hidro', value: toGW(hydroGeneration), unit: 'GW', change: '', changeType: 'decrease', icon: WaterIcon },
-        { id: 3, title: 'PLD (Sudeste)', value: (latestData.price || 0).toFixed(1).replace('.',','), unit: 'R$/MWh', change: '', changeType: 'increase', icon: ChartLineIcon },
+        { id: 3, title: 'Geração Térmica/Nuclear', value: toGW(thermalNuclearGeneration), unit: 'GW', change: '', changeType: 'increase', icon: FireIcon },
         { id: 4, title: 'Geração Solar/Eólica', value: toGW(solarEolicaGeneration), unit: 'GW', change: '', changeType: 'increase', icon: SunIcon },
     ];
 
-    const energySources = [
-        { name: 'Hidrelétrica', capacity: `${toGW(hydroGeneration)} GW`, percentage: Math.round((hydroGeneration / totalGeneration) * 100), icon: WaterIcon, color: 'text-blue-500' },
-        { name: 'Eólica + Solar', capacity: `${toGW(solarEolicaGeneration)} GW`, percentage: Math.round((solarEolicaGeneration / totalGeneration) * 100), icon: SunIcon, color: 'text-yellow-400' },
-        { name: 'Térmica (Total)', capacity: `${toGW(latestData.thermal)} GW`, percentage: Math.round((latestData.thermal / totalGeneration) * 100), icon: FireIcon, color: 'text-orange-500' },
+    const sources = [
+        { name: 'Hidrelétrica', value: latestData.hydro, icon: WaterIcon, color: 'text-blue-500', fill: '#3b82f6' },
+        { name: 'Eólica + Solar', value: solarEolicaGeneration, icon: SunIcon, color: 'text-yellow-400', fill: '#facc15' },
+        { name: 'Térmica', value: latestData.thermal, icon: FireIcon, color: 'text-orange-500', fill: '#f97316' },
+        { name: 'Nuclear', value: latestData.nuclear, icon: NuclearIcon, color: 'text-purple-500', fill: '#a855f7' },
     ];
+
+    const energySources = sources.map(s => ({
+        name: s.name,
+        capacity: `${toGW(s.value)} GW`,
+        percentage: Math.round((s.value / totalGeneration) * 100),
+        icon: s.icon,
+        color: s.color,
+    }));
     
-    const energyMix = energySources.map(s => ({ name: s.name.split(' ')[0], value: s.percentage, fill: s.color.startsWith('text-blue') ? '#3b82f6' : s.color.startsWith('text-yellow') ? '#facc15' : '#f97316' }));
+    const energyMix = sources.map(s => ({ 
+        name: s.name.split(' ')[0], 
+        value: Math.round((s.value / totalGeneration) * 100),
+        fill: s.fill
+    }));
 
     return {
         kpis, alerts: [], phases: [], installations: [], cryptoAccounts: [], energySources,
         chartData: {
             generation: chartTimeData.map(d => ({ time: d.time, geracao: d.geracao, demanda: d.demanda })),
             prices: chartTimeData.map(d => ({ time: d.time, price: d.price })),
-            energyPrediction: chartTimeData.map(d => ({ time: d.time, solar: d.solar, thermal: d.thermal, hydro: d.hydro, battery: 0, eolica: d.eolica })),
+            energyPrediction: chartTimeData.map(d => ({ time: d.time, solar: d.solar, thermal: d.thermal, hydro: d.hydro, battery: 0, eolica: d.eolica, nuclear: d.nuclear })),
             demandPrediction: chartTimeData.map(d => ({ time: d.time, value: d.demanda })),
             energyMix, efficiency: [], weather: [], annualProjections: [], sevenDayForecast: [],
         },

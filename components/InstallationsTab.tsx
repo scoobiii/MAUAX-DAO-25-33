@@ -1,10 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { select, group, hierarchy, treemap, scaleSequential, interpolateRdYlGn, extent } from 'd3';
+// Fix: Import HierarchyRectangularNode to correctly type nodes after treemap layout is applied.
+import { select, group, hierarchy, treemap, scaleSequential, interpolateRdYlGn, extent, HierarchyRectangularNode } from 'd3';
 import { Installation } from '../types';
 import { SolarPanelIcon, ThIcon, TableIcon, MapIcon } from './icons';
 import InstallationTable from './InstallationTable';
-import InstallationMap from './InstallationMap';
 
+// Fix: Define an interface for the data structure used by the treemap to ensure type safety.
+interface TreemapData {
+    name: string;
+    children?: TreemapData[];
+    count?: number;
+    capacity?: number;
+    [key: string]: any; // Allow for dynamic property from colorBy
+}
 
 const Treemap: React.FC<{
     data: Installation[];
@@ -21,16 +29,43 @@ const Treemap: React.FC<{
         const svg = select(ref.current);
         svg.selectAll("*").remove();
         
+        // --- Data Aggregation Logic ---
+        let secondaryGroupBy: keyof Pick<Installation, 'tamanho' | 'setor'> = 'tamanho';
+        if (groupBy === 'tamanho') secondaryGroupBy = 'setor';
+
         const groupedData = group(data, d => d[groupBy]);
-        const rootData = { name: "root", children: Array.from(groupedData.entries()).map(([key, values]) => ({ name: key, children: values })) };
+        
+        const rootData: TreemapData = {
+            name: "root",
+            children: Array.from(groupedData.entries()).map(([primaryKey, primaryValues]) => {
+                const secondaryGroupedData = group(primaryValues, d => d[secondaryGroupBy]);
+                return {
+                    name: String(primaryKey),
+                    children: Array.from(secondaryGroupedData.entries()).map(([secondaryKey, secondaryValues]) => {
+                        const totalCapacity = secondaryValues.reduce((acc, d) => acc + d.capacity, 0);
+                        const avgColorBy = secondaryValues.reduce((acc, d) => acc + d[colorBy], 0) / secondaryValues.length;
+                        const count = secondaryValues.length;
+                        return {
+                            name: String(secondaryKey),
+                            count,
+                            capacity: totalCapacity,
+                            [colorBy]: avgColorBy,
+                        };
+                    })
+                };
+            })
+        };
 
         const root = hierarchy(rootData)
-            .sum((d: any) => d.capacity || 0)
-            .sort((a, b) => (b.value || 0) - (a.value || 0));
+            .sum((d: TreemapData) => d.capacity || 0)
+            // Fix: Cast 'a' and 'b' to any to access the 'value' property added by .sum()
+            .sort((a, b) => ((b as any).value || 0) - ((a as any).value || 0));
 
-        treemap<any>()
+        treemap<TreemapData>()
             .size([width, height])
-            .padding(2)
+            .paddingOuter(8)
+            .paddingTop(20) // Space for parent label
+            .paddingInner(2)
             (root);
         
         const colorDomain = extent(data, d => d[colorBy]) as [number, number];
@@ -41,30 +76,72 @@ const Treemap: React.FC<{
         } else {
             colorScale.domain(colorDomain);
         }
+        
+        // Fix: Cast the root node to HierarchyRectangularNode to access layout properties (x0, y0, x1, y1).
+        const rectRoot = root as HierarchyRectangularNode<TreemapData>;
 
         const nodes = svg.selectAll("g")
-            .data(root.leaves())
-            .enter()
-            .append("g")
-            .attr("transform", (d: any) => `translate(${d.x0},${d.y0})`);
+            .data(rectRoot.descendants().filter(d => d.depth > 0)) // All nodes except invisible root
+            .join("g")
+            .attr("transform", d => `translate(${d.x0},${d.y0})`);
 
         nodes.append("rect")
-            .attr("width", (d: any) => d.x1 - d.x0)
-            .attr("height", (d: any) => d.y1 - d.y0)
-            .attr("fill", (d: any) => colorScale(d.data[colorBy]))
-            .attr("stroke", "#1a202c")
-            .style("transition", "fill 0.3s ease");
+            .attr("width", d => d.x1 - d.x0)
+            .attr("height", d => d.y1 - d.y0)
+            .attr("fill", d => {
+                if (d.depth === 1) return 'rgba(113, 128, 150, 0.1)'; // Primary group background
+                return colorScale(d.data[colorBy]); // Leaf node color
+            })
+            .attr("stroke", "#1a202c");
+        
+        nodes.append("title")
+            .text(d => {
+                if (d.depth === 1) {
+                    // Fix: Cast 'd' to any to access the 'value' property added by .sum()
+                    return `${d.data.name}\nTotal Capacity: ${((d as any).value || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} m²`;
+                }
+                 // Fix: Cast 'd' and 'd.parent' to any to access the 'value' property. The 'count' property is now correctly typed.
+                const percentageOfParent = (((d as any).value || 0) / ((d.parent as any)?.value || 1) * 100).toFixed(1);
+                return `${d.parent?.data.name} - ${d.data.name}\nCapacity: ${((d as any).value || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} m² (${percentageOfParent}%)\nAvg ${colorBy}: ${d.data[colorBy].toFixed(2)}\nInstallations in sample: ${d.data.count}`;
+            });
 
-        nodes.append("text")
-            .selectAll("tspan")
-            .data((d: any) => d.data.id.split(/(?=[A-Z][^A-Z])/g))
-            .enter().append("tspan")
-            .attr("x", 4)
-            .attr("y", (d, i) => 13 + i * 10)
-            .text((d: any) => d)
-            .attr("font-size", "10px")
-            .attr("fill", "#fff")
-            .style("text-shadow", "1px 1px 2px #000");
+        // Add labels
+        nodes.each(function(d) {
+            const node = select(this);
+            const width = d.x1 - d.x0;
+            const height = d.y1 - d.y0;
+
+            if (d.depth === 1) { // Primary group labels
+                if (height > 20) {
+                     node.append("text")
+                        .attr("x", 4)
+                        .attr("y", 14)
+                        .attr("fill", '#e2e8f0')
+                        .attr("font-size", "14px")
+                        .attr("font-weight", "bold")
+                        .text(d.data.name);
+                }
+            } else { // Leaf node labels
+                if (width > 50 && height > 35) {
+                    node.append("text")
+                        .attr("x", 5)
+                        .attr("y", 16)
+                        .attr("fill", '#fff')
+                        .attr("font-size", "12px")
+                        .style("text-shadow", "1px 1px 2px #000")
+                        .text(d.data.name);
+                    
+                    node.append("text")
+                        .attr("x", 5)
+                        .attr("y", 32)
+                        .attr("fill", "#fff")
+                        .attr("font-size", "10px")
+                        .style("text-shadow", "1px 1px 2px #000")
+                        // Fix: Cast 'd' to any to access the 'value' property added by .sum()
+                        .text(`${(((d as any).value || 0) / 1000).toFixed(0)}k m²`);
+                }
+            }
+        });
 
     }, [data, groupBy, colorBy]);
 
@@ -111,6 +188,27 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
         </button>
     );
 
+    const renderMapView = () => (
+        <div>
+             <h3 className="text-lg font-semibold mb-2">Análise de Potencial Solar (Google Sunroof)</h3>
+             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Explore o potencial de energia solar para telhados na região. Use a busca para encontrar um endereço e ver a estimativa de economia e tamanho da instalação.
+            </p>
+            <div className="w-full h-[650px] bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden">
+                <iframe
+                    src="https://solar-potential-296769475687.us-central1.run.app/?_gl=1*1ryhhxe*_ga*NzkyNTg2OTQyLjE3NTgxMzMwNDU.*_ga_NRWSTWS78N*czE3NTgxMzMwNDckbzEkZzAkdDE3NTgxMzMwNTEkajU2JGwwJGgw"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title="Google Solar Potential Map"
+                ></iframe>
+            </div>
+        </div>
+    );
+
     return (
         <section>
             <div className="flex justify-between items-center mb-6">
@@ -134,12 +232,11 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
                  <div className="filter-group">
                     <label className="mr-2 text-sm font-medium">Colorir por:</label>
                      <select value={colorBy} onChange={e => setColorBy(e.target.value as any)} className="filter-select px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md">
-                        <option value="efficiency">Eficiência (%)</option>
-                        <option value="roi">ROI (%)</option>
-                        <option value="age">Idade (anos)</option>
-                        <option value="capacity">Capacidade (Área m²)</option>
-                        <option value="capex">CAPEX (R$)</option>
-                        <option value="opex">OPEX (R$)</option>
+                        <option value="efficiency">Eficiência Média (%)</option>
+                        <option value="roi">ROI Médio (%)</option>
+                        <option value="age">Idade Média (anos)</option>
+                        <option value="capex">CAPEX Médio (R$)</option>
+                        <option value="opex">OPEX Médio (R$)</option>
                     </select>
                 </div>
             </div>
@@ -147,7 +244,7 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
             <div className="bg-white dark:bg-dark-card p-4 rounded-lg shadow-md">
                 {view === 'treemap' && <Treemap data={installations} groupBy={groupBy} colorBy={colorBy} />}
                 {view === 'table' && <InstallationTable installations={installations} />}
-                {view === 'map' && <InstallationMap installations={installations} colorBy={colorBy} />}
+                {view === 'map' && renderMapView()}
             </div>
 
             <div className="mt-8">

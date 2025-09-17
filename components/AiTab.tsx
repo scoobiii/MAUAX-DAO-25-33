@@ -27,7 +27,7 @@ class MEXEnergyOptimizer:
 
     const combinedData = chartData.energyPrediction.map((ep, i) => {
         const demand = chartData.demandPrediction[i]?.value ?? 0;
-        const totalGeneration = ep.solar + ep.thermal + ep.hydro + ep.battery + ep.eolica;
+        const totalGeneration = ep.solar + ep.thermal + ep.hydro + ep.battery + ep.eolica + (ep.nuclear || 0);
         const netDemand = Math.max(0, demand - ep.solar); // This is the duck curve
         return {
             ...ep,
@@ -154,6 +154,10 @@ class MEXEnergyOptimizer:
                                         <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.8}/>
                                         <stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/>
                                     </linearGradient>
+                                    <linearGradient id="colorNuclear" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#a855f7" stopOpacity={0.8}/>
+                                        <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+                                    </linearGradient>
                                 </defs>
                                  <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2}/>
                                  <XAxis dataKey="time" stroke="currentColor"/>
@@ -164,6 +168,7 @@ class MEXEnergyOptimizer:
                                  <Area type="monotone" dataKey="eolica" stackId="1" stroke="#22d3ee" fill="url(#colorEolic)" name="Eólica" />
                                  <Area type="monotone" dataKey="thermal" stackId="1" stroke="#f97316" fill="url(#colorThermal)" name="Térmica" />
                                  <Area type="monotone" dataKey="hydro" stackId="1" stroke="#3b82f6" fill="url(#colorHydro)" name="Hidro" />
+                                 <Area type="monotone" dataKey="nuclear" stackId="1" stroke="#a855f7" fill="url(#colorNuclear)" name="Nuclear" />
                                  <Area type="monotone" dataKey="battery" stackId="1" stroke="#22c55e" fill="url(#colorBattery)" name="Baterias" />
                                  <Line type="monotone" dataKey="demand" stroke="#ed8936" strokeWidth={3} dot={false} name="Demanda"/>
                                  <Line type="monotone" dataKey="netDemand" stroke="#ec4899" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Demanda Líquida (Curva Pato)"/>
