@@ -41,10 +41,9 @@ const InstallationMap: React.FC<InstallationMapProps> = ({ installations, colorB
     useEffect(() => {
         if (!mapInstance.current || !layerGroup.current || installations.length === 0) return;
 
-        // Clear previous markers
+        // Clear previous layers
         layerGroup.current.clearLayers();
 
-        // Create color scale (same as Treemap)
         const colorDomain = extent(installations, d => d[colorBy]) as [number, number];
         const colorScale = scaleSequential(interpolateRdYlGn);
         if (['age', 'capex', 'opex'].includes(colorBy)) {
@@ -53,15 +52,43 @@ const InstallationMap: React.FC<InstallationMapProps> = ({ installations, colorB
             colorScale.domain(colorDomain);
         }
 
-        // Add new markers
         installations.forEach(inst => {
-            // Calculate the radius of a circle with an area equal to the installation's capacity.
-            // Add a scaling factor to make them more visible at city-level zoom.
-            const radiusInMeters = Math.sqrt(inst.capacity / Math.PI);
-            const scaledRadius = radiusInMeters * 15;
+            const area = inst.capacity; // in m^2
+            const aspectRatio = 0.7 + Math.random() * 0.6; // Keep it somewhat squarish
+            const widthMeters = Math.sqrt(area * aspectRatio);
+            const heightMeters = area / widthMeters;
 
-            const marker = L.circle([inst.lat, inst.lng], {
-                radius: scaledRadius,
+            const metersPerDegreeLat = 111132;
+            const metersPerDegreeLng = 111320 * Math.cos(inst.lat * Math.PI / 180);
+
+            const widthDeg = widthMeters / metersPerDegreeLng;
+            const heightDeg = heightMeters / metersPerDegreeLat;
+
+            const angle = Math.random() * Math.PI;
+            const cosAngle = Math.cos(angle);
+            const sinAngle = Math.sin(angle);
+            
+            const rotate = (x_deg: number, y_deg: number) => ({
+                lng: x_deg * cosAngle - y_deg * sinAngle,
+                lat: x_deg * sinAngle + y_deg * cosAngle,
+            });
+
+            const halfWidth = widthDeg / 2;
+            const halfHeight = heightDeg / 2;
+            
+            const p1 = rotate(-halfWidth, -halfHeight);
+            const p2 = rotate(halfWidth, -halfHeight);
+            const p3 = rotate(halfWidth, halfHeight);
+            const p4 = rotate(-halfWidth, halfHeight);
+
+            const polygonCoords: L.LatLngExpression[] = [
+                [inst.lat + p1.lat, inst.lng + p1.lng],
+                [inst.lat + p2.lat, inst.lng + p2.lng],
+                [inst.lat + p3.lat, inst.lng + p3.lng],
+                [inst.lat + p4.lat, inst.lng + p4.lng],
+            ];
+            
+            const polygon = L.polygon(polygonCoords, {
                 fillColor: colorScale(inst[colorBy]),
                 color: '#1a202c',
                 weight: 0.5,
@@ -78,9 +105,9 @@ const InstallationMap: React.FC<InstallationMapProps> = ({ installations, colorB
                     <b>ROI:</b> ${inst.roi.toFixed(1)}%
                 </div>
             `;
-            marker.bindPopup(popupContent);
+            polygon.bindPopup(popupContent);
             
-            layerGroup.current?.addLayer(marker);
+            layerGroup.current?.addLayer(polygon);
         });
     }, [installations, colorBy]);
 
