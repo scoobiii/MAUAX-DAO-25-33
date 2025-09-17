@@ -2,9 +2,10 @@ import React from 'react';
 
 // Fix: Defined enums locally to break a circular dependency with App.tsx.
 export enum Tab {
+    Vision2033 = 'Visão 2033',
     Dashboard = 'Dashboard',
     Installations = 'Installations',
-    Projections = 'Projections',
+    Projections = 'Projeções',
     Energy = 'Energy',
     Crypto = 'Crypto',
     AI = 'AI',

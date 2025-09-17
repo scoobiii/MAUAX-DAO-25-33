@@ -178,21 +178,34 @@ class MEXEnergyOptimizer:
                     </ChartCard>
 
                     {chartData.sevenDayForecast && chartData.sevenDayForecast.length > 0 && (
-                        <ChartCard title="Previsão de Geração Solar (Próximos 7 Dias)" chartHeight="h-96">
-                            <ResponsiveContainer>
-                                <LineChart data={chartData.sevenDayForecast} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-                                    <XAxis dataKey="day" stroke="currentColor" />
-                                    <YAxis yAxisId="left" stroke="#4299e1" label={{ value: 'GWh / kWh/m²', angle: -90, position: 'insideLeft', fill: '#4299e1' }} />
-                                    <YAxis yAxisId="right" orientation="right" stroke="#f87171" label={{ value: 'Temp (°C)', angle: 90, position: 'insideRight', fill: '#f87171' }} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#2d3748', border: 'none' }} />
-                                    <Legend />
-                                    <Line yAxisId="left" type="monotone" dataKey="geracaoPrevista" stroke="#4299e1" strokeWidth={2} name="Geração Prevista (GWh)" />
-                                    <Line yAxisId="left" type="monotone" dataKey="irradiacao" stroke="#facc15" strokeWidth={2} name="Irradiação (kWh/m²/dia)" />
-                                    <Line yAxisId="right" type="monotone" dataKey="temp" stroke="#f87171" strokeWidth={2} name="Temperatura Média (°C)" />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </ChartCard>
+                        <>
+                            <ChartCard title="Previsão do Clima (Próximos 7 Dias)" chartHeight="h-96">
+                                <ResponsiveContainer>
+                                    <LineChart data={chartData.sevenDayForecast} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                                        <XAxis dataKey="day" stroke="currentColor" />
+                                        <YAxis yAxisId="left" stroke="#facc15" label={{ value: 'Irradiação (kWh/m²/dia)', angle: -90, position: 'insideLeft', fill: '#facc15' }} />
+                                        <YAxis yAxisId="right" orientation="right" stroke="#f87171" label={{ value: 'Temp (°C)', angle: 90, position: 'insideRight', fill: '#f87171' }} />
+                                        <Tooltip contentStyle={{ backgroundColor: '#2d3748', border: 'none' }} />
+                                        <Legend />
+                                        <Line yAxisId="left" type="monotone" dataKey="irradiacao" stroke="#facc15" strokeWidth={2} name="Irradiação (kWh/m²/dia)" />
+                                        <Line yAxisId="right" type="monotone" dataKey="temp" stroke="#f87171" strokeWidth={2} name="Temperatura Média (°C)" />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </ChartCard>
+                            <ChartCard title="Previsão de Geração Solar (Próximos 7 Dias)" chartHeight="h-96">
+                                <ResponsiveContainer>
+                                    <LineChart data={chartData.sevenDayForecast} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                                        <XAxis dataKey="day" stroke="currentColor" />
+                                        <YAxis stroke="#4299e1" unit=" GWh" label={{ value: 'Geração (GWh)', angle: -90, position: 'insideLeft', fill: '#4299e1' }} />
+                                        <Tooltip contentStyle={{ backgroundColor: '#2d3748', border: 'none' }} formatter={(value: number) => `${value.toFixed(2)} GWh`} />
+                                        <Legend />
+                                        <Line type="monotone" dataKey="geracaoPrevista" stroke="#4299e1" strokeWidth={2} name="Geração Prevista (GWh)" />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </ChartCard>
+                        </>
                     )}
                 </div>
             </div>

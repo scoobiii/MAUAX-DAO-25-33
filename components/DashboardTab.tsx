@@ -23,8 +23,10 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ chartData, phases }) => {
                     <option>Últimos 30 dias</option>
                 </select>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <ChartCard title="Geração vs Demanda">
+            
+            {/* Primary Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <ChartCard title="Geração vs Demanda" className="lg:col-span-2">
                     <ResponsiveContainer>
                         <LineChart data={chartData.generation}>
                             <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2}/>
@@ -53,7 +55,10 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ chartData, phases }) => {
                         </ResponsiveContainer>
                     </ChartCard>
                 )}
+            </div>
 
+            {/* Secondary Charts Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <ChartCard title="Preços de Energia (R$/MWh)">
                     <ResponsiveContainer>
                         <BarChart data={chartData.prices}>

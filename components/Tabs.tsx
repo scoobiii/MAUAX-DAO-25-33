@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tab } from '../types';
-import { DashboardIcon, SolarPanelIcon, ChartLineIcon, BoltIcon, CoinsIcon, BrainIcon } from './icons';
+import { DashboardIcon, SolarPanelIcon, ChartLineIcon, BoltIcon, CoinsIcon, BrainIcon, GoalIcon } from './icons';
 
 interface TabsProps {
     activeTab: Tab;
@@ -8,6 +8,7 @@ interface TabsProps {
 }
 
 const tabConfig = [
+    { id: Tab.Vision2033, label: 'Visão 2033', icon: GoalIcon },
     { id: Tab.Dashboard, label: 'Dashboard', icon: DashboardIcon },
     { id: Tab.Installations, label: 'Instalações', icon: SolarPanelIcon },
     { id: Tab.Projections, label: 'Projeções', icon: ChartLineIcon },
@@ -17,9 +18,12 @@ const tabConfig = [
 ];
 
 const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab }) => {
+    const isVisionTab = activeTab === Tab.Vision2033;
+    const navClasses = isVisionTab ? "-mb-px flex space-x-4 overflow-x-auto border-b border-gray-700" : "-mb-px flex space-x-4 overflow-x-auto border-b border-gray-200 dark:border-gray-700";
+
     return (
-        <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="-mb-px flex space-x-4 overflow-x-auto" aria-label="Tabs">
+        <div className={isVisionTab ? '' : 'border-b border-gray-200 dark:border-gray-700'}>
+             <nav className={navClasses} aria-label="Tabs">
                 {tabConfig.map(tab => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
@@ -30,7 +34,7 @@ const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab }) => {
                             className={`whitespace-nowrap flex py-4 px-1 border-b-2 font-medium text-sm items-center transition-colors
                                 ${isActive 
                                     ? 'border-accent text-accent' 
-                                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
+                                    : `border-transparent ${isVisionTab ? 'text-gray-400 hover:text-gray-200 hover:border-gray-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'}`
                                 }`}
                         >
                             <Icon className="w-5 h-5 mr-2" />
