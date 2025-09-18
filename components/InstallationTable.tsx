@@ -61,6 +61,7 @@ const InstallationTable: React.FC<{ installations: Installation[] }> = ({ instal
         { key: 'tamanho', label: 'Tamanho' },
         { key: 'capacity', label: 'Capacidade (m²)', className: 'text-right' },
         { key: 'efficiency', label: 'Eficiência (%)', className: 'text-right' },
+        { key: 'carbonOffset', label: 'CO₂ Offset (kg/ano)', className: 'text-right' },
         { key: 'age', label: 'Idade', className: 'text-right' },
         { key: 'roi', label: 'ROI (%)', className: 'text-right' },
         { key: 'capex', label: 'CAPEX (R$)', className: 'text-right' },
@@ -89,6 +90,7 @@ const InstallationTable: React.FC<{ installations: Installation[] }> = ({ instal
                             <td className="p-3 whitespace-nowrap text-sm">{inst.tamanho}</td>
                             <td className="p-3 whitespace-nowrap text-sm text-right">{formatNumber(inst.capacity, { maximumFractionDigits: 0 })}</td>
                             <td className="p-3 whitespace-nowrap text-sm text-right">{formatNumber(inst.efficiency, { maximumFractionDigits: 1 })}</td>
+                            <td className="p-3 whitespace-nowrap text-sm text-right">{formatNumber(inst.carbonOffset, { maximumFractionDigits: 0 })}</td>
                             <td className="p-3 whitespace-nowrap text-sm text-right">{formatNumber(inst.age, { maximumFractionDigits: 1 })}</td>
                             <td className="p-3 whitespace-nowrap text-sm text-right font-medium">{formatNumber(inst.roi, { maximumFractionDigits: 1 })}</td>
                             <td className="p-3 whitespace-nowrap text-sm text-right">{formatNumber(inst.capex, { style: 'currency', currency: 'BRL' })}</td>

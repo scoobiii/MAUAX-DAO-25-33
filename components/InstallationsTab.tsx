@@ -4,6 +4,8 @@ import { select, group, hierarchy, treemap, scaleSequential, interpolateRdYlGn, 
 import { Installation } from '../types';
 import { SolarPanelIcon, ThIcon, TableIcon, MapIcon } from './icons';
 import InstallationTable from './InstallationTable';
+import InstallationMap from './InstallationMap';
+import InteractiveMap from './InteractiveMap'; // New map component
 
 // Fix: Define an interface for the data structure used by the treemap to ensure type safety.
 interface TreemapData {
@@ -11,13 +13,14 @@ interface TreemapData {
     children?: TreemapData[];
     count?: number;
     capacity?: number;
+    carbonOffset?: number;
     [key: string]: any; // Allow for dynamic property from colorBy
 }
 
 const Treemap: React.FC<{
     data: Installation[];
     groupBy: keyof Pick<Installation, 'tamanho' | 'orientacao' | 'setor'>;
-    colorBy: keyof Pick<Installation, 'efficiency' | 'capacity' | 'age' | 'roi' | 'capex' | 'opex'>;
+    colorBy: keyof Pick<Installation, 'efficiency' | 'capacity' | 'age' | 'roi' | 'capex' | 'opex' | 'carbonOffset'>;
 }> = ({ data, groupBy, colorBy }) => {
     const ref = React.useRef<SVGSVGElement>(null);
     const width = 800;
@@ -157,10 +160,14 @@ interface InstallationsTabProps {
     installations: Installation[];
 }
 
+type MapType = 'density' | 'interactive' | 'potential';
+
 const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) => {
     const [groupBy, setGroupBy] = useState<keyof Pick<Installation, 'tamanho' | 'orientacao' | 'setor'>>('setor');
-    const [colorBy, setColorBy] = useState<keyof Pick<Installation, 'efficiency' | 'capacity' | 'age' | 'roi' | 'capex' | 'opex'>>('efficiency');
-    const [view, setView] = useState<'treemap' | 'table' | 'map'>('treemap');
+    const [colorBy, setColorBy] = useState<keyof Pick<Installation, 'efficiency' | 'capacity' | 'age' | 'roi' | 'capex' | 'opex' | 'carbonOffset'>>('efficiency');
+    const [view, setView] = useState<'treemap' | 'table' | 'map'>('map');
+    const [showHeatmap, setShowHeatmap] = useState(true);
+    const [mapType, setMapType] = useState<MapType>('interactive');
 
     const potentialStats = [
         { label: 'Compensação de Carbono', value: '125.609,45', unit: 'toneladas métricas' },
@@ -188,24 +195,77 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
         </button>
     );
 
+    const MapTypeButton: React.FC<{ mapName: MapType; label: string }> = ({ mapName, label }) => (
+         <button
+            onClick={() => setMapType(mapName)}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                mapType === mapName
+                    ? 'bg-white dark:bg-dark-card shadow'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+        >
+            {label}
+        </button>
+    );
+
+    const mapDescriptions = {
+        density: 'Visualização geoespacial das instalações. Ative o "Mapa de Calor" para ver a densidade da capacidade e use o menu "Colorir por" para alterar os pontos.',
+        interactive: 'Mapa interativo com polígonos de setores, marcadores individuais e busca em tempo real. Use o zoom para explorar e clique nos elementos para ver detalhes.',
+        potential: 'Análise de potencial solar fornecida pelo Google Sunroof. Explore o potencial de geração de energia em telhados individuais na região de Mauá.',
+    };
+
     const renderMapView = () => (
         <div>
-             <h3 className="text-lg font-semibold mb-2">Análise de Potencial Solar (Google Sunroof)</h3>
-             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Explore o potencial de energia solar para telhados na região. Use a busca para encontrar um endereço e ver a estimativa de economia e tamanho da instalação.
-            </p>
-            <div className="w-full h-[650px] bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden">
-                <iframe
-                    src="https://solar-potential-296769475687.us-central1.run.app/?_gl=1*1ryhhxe*_ga*NzkyNTg2OTQyLjE3NTgxMzMwNDU.*_ga_NRWSTWS78N*czE3NTgxMzMwNDckbzEkZzAkdDE3NTgxMzMwNTEkajU2JGwwJGgw"
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
-                    allowFullScreen
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    title="Google Solar Potential Map"
-                ></iframe>
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
+                <div>
+                    <h3 className="text-lg font-semibold">Mapa de Instalações</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 max-w-2xl">
+                        {mapDescriptions[mapType]}
+                    </p>
+                </div>
+                <div className="flex items-center gap-4">
+                     <div className="flex space-x-1 bg-gray-200 dark:bg-gray-700 p-1 rounded-lg">
+                         <MapTypeButton mapName="density" label="Densidade" />
+                         <MapTypeButton mapName="interactive" label="Interativo" />
+                         <MapTypeButton mapName="potential" label="Potencial" />
+                    </div>
+                    {mapType === 'density' && (
+                        <div className="flex items-center">
+                            <label htmlFor="heatmap-toggle" className="mr-3 text-sm font-medium">
+                                Mapa de Calor
+                            </label>
+                            <button
+                                id="heatmap-toggle"
+                                onClick={() => setShowHeatmap(!showHeatmap)}
+                                className={`${
+                                    showHeatmap ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-600'
+                                } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2`}
+                                role="switch"
+                                aria-checked={showHeatmap}
+                            >
+                                <span
+                                    className={`${
+                                        showHeatmap ? 'translate-x-6' : 'translate-x-1'
+                                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                                />
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
+            
+            {mapType === 'density' && <InstallationMap installations={installations} colorBy={colorBy} showHeatmap={showHeatmap} />}
+            {mapType === 'interactive' && <InteractiveMap installations={installations} />}
+            {mapType === 'potential' && (
+                <div className="w-full h-[600px] bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                    <iframe 
+                        src="https://solar-potential-296769475687.us-central1.run.app/?_gl=1*1y6hw4y*_ga*OTMwMDQxNTI3LjE3NTgxOTk2NDM.*_ga_NRWSTWS78N*czE3NTgxOTk2NDUkbzEkZzAkdDE3NTgxOTk2NDYkajU5JGwwJGgw"
+                        title="Potencial Solar"
+                        className="w-full h-full border-0"
+                        allow="geolocation"
+                    ></iframe>
+                </div>
+            )}
         </div>
     );
 
@@ -235,6 +295,8 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
                         <option value="efficiency">Eficiência Média (%)</option>
                         <option value="roi">ROI Médio (%)</option>
                         <option value="age">Idade Média (anos)</option>
+                        <option value="capacity">Capacidade (m²)</option>
+                        <option value="carbonOffset">Compensação de Carbono (kg CO₂/ano)</option>
                         <option value="capex">CAPEX Médio (R$)</option>
                         <option value="opex">OPEX Médio (R$)</option>
                     </select>

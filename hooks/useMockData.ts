@@ -67,6 +67,7 @@ const generateInstallations = (): Installation[] => {
             const opex = capex * 0.015; // 1.5% of CAPEX for annual OPEX
             // Simplified ROI: higher efficiency and lower age -> better ROI.
             const roi = 7 + (efficiency - 16) / 6 * 10 - age / 2; // ROI between ~2% and 17%
+            const carbonOffset = capacityKW * 1500 * 0.0762; // 1500 kWh/kWp/year, 0.0762 kgCO2/kWh
 
             // Pick a random cluster
             const cluster = clusters[Math.floor(Math.random() * clusters.length)];
@@ -93,6 +94,7 @@ const generateInstallations = (): Installation[] => {
                 roi: roi,
                 lat,
                 lng,
+                carbonOffset,
             });
         }
     });

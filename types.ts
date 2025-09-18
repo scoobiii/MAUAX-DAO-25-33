@@ -53,6 +53,7 @@ export interface Installation {
     opex: number;
     lat: number;
     lng: number;
+    carbonOffset: number;
 }
 
 export interface CryptoAccount {
