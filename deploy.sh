@@ -2,7 +2,7 @@
 set -e
 
 # Nome do repositório no GitHub
-REPO_NAME="ThermoFlex-Dashboard"
+REPO_NAME="MAUAX-DAO-25-33"
 
 echo "🚀 Iniciando deploy do projeto $REPO_NAME..."
 
