@@ -82,14 +82,30 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ installations }) => {
         // Atualiza Marcadores (baseado nas instalações filtradas)
         markersLayerRef.current.clearLayers();
         filteredInstallations.forEach(inst => {
-            L.marker([inst.lat, inst.lng])
-                .bindPopup(`
-                    <b>ID:</b> ${inst.id}<br>
-                    <b>Setor:</b> ${inst.setor}<br>
-                    <b>Tamanho:</b> ${inst.tamanho}<br>
-                    <b>Capacidade:</b> ${inst.capacity.toFixed(0)} m²
-                `)
-                .addTo(markersLayerRef.current);
+            const marker = L.marker([inst.lat, inst.lng]);
+            
+            const tooltipContent = `
+                <div class="p-1 font-sans">
+                    <h3 class="font-bold text-sm mb-1">Instalação ${inst.id}</h3>
+                    <p><strong>Setor:</strong> ${inst.setor}</p>
+                    <p><strong>Tamanho:</strong> ${inst.tamanho}</p>
+                    <hr class="my-1 border-gray-200 dark:border-gray-600">
+                    <p><strong>Capacidade:</strong> ${inst.capacity.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} m²</p>
+                    <p><strong>Eficiência:</strong> ${inst.efficiency.toFixed(1)}%</p>
+                </div>
+            `;
+            
+            // Usar bindPopup, mas acioná-lo no hover para simular um tooltip rico
+            marker.bindPopup(tooltipContent, { closeButton: false, minWidth: 200 });
+
+            marker.on('mouseover', function () {
+                this.openPopup();
+            });
+            marker.on('mouseout', function () {
+                this.closePopup();
+            });
+            
+            marker.addTo(markersLayerRef.current);
         });
 
     }, [installations, filteredInstallations]);
