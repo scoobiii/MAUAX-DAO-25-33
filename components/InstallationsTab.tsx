@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Installation } from '../types';
 import InstallationTable from './InstallationTable';
 import InteractiveMap from './InteractiveMap';
 import ChoroplethMap from './ChoroplethMap';
 import InstallationDetails from './InstallationDetails';
 import TreemapChart from './TreemapChart';
-import { MapIcon, TableIcon, ChartAreaIcon, ThIcon, SunIcon } from './icons';
+import { MapIcon, TableIcon, ChartAreaIcon, ThIcon, SunIcon, ExpandIcon, TimesIcon } from './icons';
 
 interface InstallationsTabProps {
     installations: Installation[];
@@ -47,6 +47,7 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
     const [setorFilter, setSetorFilter] = useState<string>('all');
     const [choroplethMetric, setChoroplethMetric] = useState<Metric>('roi');
     const [selectedInstallation, setSelectedInstallation] = useState<Installation | null>(null);
+    const [isMapFullscreen, setMapFullscreen] = useState(false);
 
     const setores = useMemo(() => ['all', ...Array.from(new Set(installations.map(i => i.setor)))], [installations]);
 
@@ -56,6 +57,23 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
         }
         return installations.filter(inst => inst.setor === setorFilter);
     }, [installations, setorFilter]);
+    
+    const handleToggleFullscreen = useCallback(() => {
+        setMapFullscreen(prev => !prev);
+    }, []);
+
+    useEffect(() => {
+        const originalOverflow = document.body.style.overflow;
+        if (isMapFullscreen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = originalOverflow;
+        }
+        return () => {
+            document.body.style.overflow = originalOverflow;
+        };
+    }, [isMapFullscreen]);
+
 
     const handleSelectInstallation = (installation: Installation) => {
         setSelectedInstallation(installation);
@@ -112,13 +130,15 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
         </div>
     );
 
+    const isMapView = activeView === 'map' || activeView === 'choropleth';
+    const isEdgeToEdgeView = isMapView || activeView === 'potential';
+
     return (
         <section className="space-y-6">
-            <div className="bg-white dark:bg-dark-card p-4 sm:p-6 rounded-lg shadow-md">
+            <div className={`bg-white dark:bg-dark-card p-4 sm:p-6 rounded-lg shadow-md ${isMapFullscreen ? 'hidden' : ''}`}>
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                     <h2 className="text-2xl font-bold">Análise de Instalações</h2>
                     <div className="flex flex-wrap items-center justify-center gap-4">
-                        {/* Sector Filter */}
                         <select
                             value={setorFilter}
                             onChange={(e) => setSetorFilter(e.target.value)}
@@ -129,8 +149,6 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
                                 <option key={setor} value={setor}>{setor === 'all' ? 'Todos os Setores' : setor}</option>
                             ))}
                         </select>
-
-                        {/* View Switcher */}
                         <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
                            <ViewButton label="Tabela" icon={TableIcon} isActive={activeView === 'table'} onClick={() => setActiveView('table')} />
                            <ViewButton label="Mapa" icon={MapIcon} isActive={activeView === 'map'} onClick={() => setActiveView('map')} />
@@ -144,8 +162,26 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-dark-card p-4 sm:p-6 rounded-lg shadow-md">
+            <div 
+                className={`relative bg-white dark:bg-dark-card rounded-lg shadow-md transition-all duration-300 ease-in-out
+                    ${isMapFullscreen 
+                        ? 'fixed inset-0 z-50 rounded-none' 
+                        : isEdgeToEdgeView ? 'p-0 overflow-hidden' : 'p-4 sm:p-6'
+                    }
+                `}
+            >
                 {renderView()}
+
+                {isMapView && (
+                    <button 
+                        onClick={handleToggleFullscreen} 
+                        className="absolute top-3 right-3 z-[1001] bg-white dark:bg-dark-card p-2 rounded-full shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-transform hover:scale-110"
+                        title={isMapFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
+                        aria-label={isMapFullscreen ? "Sair da Tela Cheia" : "Ver em Tela Cheia"}
+                    >
+                        {isMapFullscreen ? <TimesIcon className="w-5 h-5" /> : <ExpandIcon className="w-5 h-5" />}
+                    </button>
+                )}
             </div>
             
             {selectedInstallation && (

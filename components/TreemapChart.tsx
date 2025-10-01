@@ -65,22 +65,24 @@ const CustomizedContent: React.FC<any> = (props) => {
 
 const TreemapChart: React.FC<TreemapChartProps> = ({ installations }) => {
     const treemapData = useMemo(() => {
-        // Fix: Use a generic type argument for `reduce` to correctly type the accumulator.
-        // This resolves issues with type inference that caused downstream properties to be 'unknown'.
-        const groupedBySector = installations.reduce<Record<string, Installation[]>>((acc, inst) => {
+        // Fix: Explicitly type the initial value of the accumulator for the `reduce` function.
+        // This ensures TypeScript correctly infers `groupedBySector` and, consequently, `sectorInstallations`
+        // is properly typed as `Installation[]`, which has the `reduce` method.
+        const groupedBySector = installations.reduce((acc, inst) => {
             if (!acc[inst.setor]) {
                 acc[inst.setor] = [];
             }
             acc[inst.setor].push(inst);
             return acc;
-        }, {});
+        }, {} as Record<string, Installation[]>);
 
         return Object.entries(groupedBySector).map(([sectorName, sectorInstallations]) => {
             type GroupedBySizeData = { totalCapacity: number; totalRoi: number; count: number };
             
-            // Fix: Apply the same generic type argument pattern to the nested reduce call.
-            // This correctly types `groupedBySize`, allowing its properties to be accessed safely.
-            const groupedBySize = sectorInstallations.reduce<Record<string, GroupedBySizeData>>((acc, inst) => {
+            // Fix: Explicitly type the accumulator for the nested `reduce` as well.
+            // This resolves errors where properties like `totalCapacity` were accessed on an `unknown` type,
+            // as `data` is now correctly inferred as `GroupedBySizeData`.
+            const groupedBySize = sectorInstallations.reduce((acc, inst) => {
                 if (!acc[inst.tamanho]) {
                     acc[inst.tamanho] = { totalCapacity: 0, totalRoi: 0, count: 0 };
                 }
@@ -88,17 +90,17 @@ const TreemapChart: React.FC<TreemapChartProps> = ({ installations }) => {
                 acc[inst.tamanho].totalRoi += inst.roi;
                 acc[inst.tamanho].count++;
                 return acc;
-            }, {});
+            }, {} as Record<string, GroupedBySizeData>);
 
             return {
                 name: sectorName,
                 children: Object.entries(groupedBySize).map(([sizeName, data]) => ({
                     name: sizeName,
                     size: data.totalCapacity,
-                    roi: data.totalRoi / data.count,
+                    roi: data.count > 0 ? data.totalRoi / data.count : 0,
                     parentName: sectorName,
                     count: data.count,
-                    avgCapacity: data.totalCapacity / data.count,
+                    avgCapacity: data.count > 0 ? data.totalCapacity / data.count : 0,
                 })),
             };
         });
