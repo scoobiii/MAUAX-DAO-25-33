@@ -19,9 +19,12 @@ try {
 
 interface InteractiveMapProps {
     installations: Installation[];
+    activeSector: string;
+    onSectorSelect: (sector: string) => void;
+    onInstallationSelect: (installation: Installation) => void;
 }
 
-const InteractiveMap: React.FC<InteractiveMapProps> = ({ installations }) => {
+const InteractiveMap: React.FC<InteractiveMapProps> = ({ installations, activeSector, onSectorSelect, onInstallationSelect }) => {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<L.Map | null>(null);
     const markersLayerRef = useRef<L.LayerGroup>(L.layerGroup());
@@ -29,14 +32,22 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ installations }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredInstallations = useMemo(() => {
-        if (!searchTerm) return installations;
-        const lowercasedTerm = searchTerm.toLowerCase();
-        return installations.filter(inst => 
-            inst.id.toLowerCase().includes(lowercasedTerm) ||
-            inst.setor.toLowerCase().includes(lowercasedTerm) ||
-            inst.tamanho.toLowerCase().includes(lowercasedTerm)
-        );
-    }, [installations, searchTerm]);
+        let items = installations;
+
+        if (activeSector !== 'all') {
+            items = items.filter(inst => inst.setor === activeSector);
+        }
+
+        if (searchTerm) {
+            const lowercasedTerm = searchTerm.toLowerCase();
+            return items.filter(inst => 
+                inst.id.toLowerCase().includes(lowercasedTerm) ||
+                inst.setor.toLowerCase().includes(lowercasedTerm) ||
+                inst.tamanho.toLowerCase().includes(lowercasedTerm)
+            );
+        }
+        return items;
+    }, [installations, activeSector, searchTerm]);
 
     // Efeito para inicializar o mapa
     useEffect(() => {
@@ -72,10 +83,20 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ installations }) => {
             const points: [number, number][] = insts.map(i => [i.lng, i.lat]);
             const hull = polygonHull(points);
             if (hull) {
+                const isSelected = setor === activeSector;
                 const leafletCoords: [number, number][] = hull.map(([lng, lat]) => [lat, lng]); // Inverte para o formato [lat, lng] do Leaflet
-                L.polygon(leafletCoords, { color: sectorColors(setor), weight: 2, fillOpacity: 0.1 })
-                    .bindPopup(`<b>Setor: ${setor}</b><br>${insts.length} instalações na amostra`)
+                const polygon = L.polygon(leafletCoords, {
+                    color: sectorColors(setor),
+                    weight: isSelected ? 4 : 2,
+                    fillOpacity: isSelected ? 0.3 : 0.1,
+                    className: 'cursor-pointer'
+                })
+                    .bindPopup(`<b>Setor: ${setor}</b><br>${insts.length} instalações na amostra<br><em>Clique para filtrar</em>`)
                     .addTo(polygonsLayerRef.current);
+                
+                polygon.on('click', () => {
+                    onSectorSelect(isSelected ? 'all' : setor);
+                });
             }
         });
 
@@ -95,20 +116,15 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ installations }) => {
                 </div>
             `;
             
-            // Usar bindPopup, mas acioná-lo no hover para simular um tooltip rico
             marker.bindPopup(tooltipContent, { closeButton: false, minWidth: 200 });
-
-            marker.on('mouseover', function () {
-                this.openPopup();
-            });
-            marker.on('mouseout', function () {
-                this.closePopup();
-            });
+            marker.on('mouseover', function () { this.openPopup(); });
+            marker.on('mouseout', function () { this.closePopup(); });
+            marker.on('click', () => onInstallationSelect(inst));
             
             marker.addTo(markersLayerRef.current);
         });
 
-    }, [installations, filteredInstallations]);
+    }, [installations, filteredInstallations, activeSector, onSectorSelect, onInstallationSelect]);
 
     return (
         <div className="relative h-[600px] w-full">

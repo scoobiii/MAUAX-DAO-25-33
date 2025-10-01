@@ -78,7 +78,7 @@ const ChoroplethMap: React.FC<ChoroplethMapProps> = ({ installations, metric }) 
             }
         });
         
-        const featuresWithData = geoJson.features.filter(f => f.properties!.count > 0);
+        const featuresWithData = geoJson.features.filter(f => f.properties!.count > 0 && f.properties!.metricValue !== undefined);
         const metricDomain = extent(featuresWithData, f => f.properties!.metricValue) as [number, number];
 
         const colorScale = scaleQuantize<string>()
@@ -133,7 +133,7 @@ const ChoroplethMap: React.FC<ChoroplethMapProps> = ({ installations, metric }) 
             onEachFeature: (feature, layer) => {
                 const props = feature.properties;
                 const config = METRIC_CONFIG[metric];
-                const valueText = props.count > 0 ? config.format(props.metricValue) : 'N/A';
+                const valueText = props.count > 0 && props.metricValue !== undefined ? config.format(props.metricValue) : 'N/A';
                 
                 const popupContent = `
                     <div class="p-1">
@@ -157,25 +157,35 @@ const ChoroplethMap: React.FC<ChoroplethMapProps> = ({ installations, metric }) 
             const div = L.DomUtil.create('div', 'info legend bg-gray-800 bg-opacity-80 p-3 rounded-md text-white');
             const grades = colorScale.thresholds();
             const colors = colorScale.range();
+            const config = METRIC_CONFIG[metric];
             
-            div.innerHTML += `<h4 class="font-bold text-sm mb-2">${METRIC_CONFIG[metric].label}</h4>`;
-            
-            // loop through our density intervals and generate a label with a colored square for each interval
-            for (let i = 0; i < grades.length; i++) {
-                const from = METRIC_CONFIG[metric].format(grades[i]);
-                const to = METRIC_CONFIG[metric].format(grades[i + 1]);
-                div.innerHTML +=
-                    `<div class="flex items-center my-1"><i class="w-4 h-4 mr-2" style="background:${colors[i+1]}"></i> ` +
-                    `${from} &ndash; ${to}</div>`;
+            let legendHtml = `<h4 class="font-bold text-sm mb-2">${config.label}</h4>`;
+
+            if (grades && grades.length > 0) {
+                // Lower bound
+                legendHtml += `<div class="flex items-center my-1"><i class="w-4 h-4 mr-2" style="background:${colors[0]}"></i> &lt; ${config.format(grades[0])}</div>`;
+
+                // Middle ranges
+                for (let i = 0; i < grades.length - 1; i++) {
+                    legendHtml += `<div class="flex items-center my-1"><i class="w-4 h-4 mr-2" style="background:${colors[i + 1]}"></i> ${config.format(grades[i])} &ndash; ${config.format(grades[i + 1])}</div>`;
+                }
+
+                // Upper bound
+                const lastGradeIndex = grades.length - 1;
+                legendHtml += `<div class="flex items-center my-1"><i class="w-4 h-4 mr-2" style="background:${colors[lastGradeIndex + 1]}"></i> &ge; ${config.format(grades[lastGradeIndex])}</div>`;
+            } else {
+                 // Handle case with no thresholds (e.g., all data is the same value)
+                 const domain = colorScale.domain();
+                 if (domain[0] !== undefined && domain[1] !== undefined) {
+                     const valueText = domain[0] === domain[1] 
+                        ? config.format(domain[0]) 
+                        : `${config.format(domain[0])} &ndash; ${config.format(domain[1])}`;
+                    legendHtml += `<div class="flex items-center my-1"><i class="w-4 h-4 mr-2" style="background:${colors[0]}"></i> ${valueText}</div>`;
+                 }
             }
-             // Add first and last items
-             div.innerHTML = `
-                <h4 class="font-bold text-sm mb-2">${METRIC_CONFIG[metric].label}</h4>
-                <div class="flex items-center my-1"><i class="w-4 h-4 mr-2" style="background:${colors[0]}"></i> < ${METRIC_CONFIG[metric].format(grades[0])}</div>
-                ${div.innerHTML}
-                <div class="flex items-center my-1"><i class="w-4 h-4 mr-2" style="background:${colors[colors.length-1]}"></i> > ${METRIC_CONFIG[metric].format(grades[grades.length-1])}</div>
-                <div class="flex items-center my-1"><i class="w-4 h-4 mr-2 bg-gray-600"></i> Sem Dados</div>
-             `;
+
+            legendHtml += `<div class="flex items-center my-1"><i class="w-4 h-4 mr-2 bg-gray-600"></i> Sem Dados</div>`;
+            div.innerHTML = legendHtml;
 
             return div;
         };

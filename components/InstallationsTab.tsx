@@ -3,13 +3,15 @@ import { Installation } from '../types';
 import InstallationTable from './InstallationTable';
 import InteractiveMap from './InteractiveMap';
 import ChoroplethMap from './ChoroplethMap';
-import { MapIcon, TableIcon, ChartAreaIcon } from './icons';
+import InstallationDetails from './InstallationDetails';
+import TreemapChart from './TreemapChart';
+import { MapIcon, TableIcon, ChartAreaIcon, ThIcon, SunIcon } from './icons';
 
 interface InstallationsTabProps {
     installations: Installation[];
 }
 
-type View = 'table' | 'map' | 'choropleth';
+type View = 'table' | 'map' | 'choropleth' | 'treemap' | 'potential';
 type Metric = keyof Pick<Installation, 'efficiency' | 'capacity' | 'age' | 'roi' | 'capex' | 'opex' | 'carbonOffset'>;
 
 const metricOptions: { value: Metric, label: string }[] = [
@@ -44,6 +46,7 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
     const [activeView, setActiveView] = useState<View>('table');
     const [setorFilter, setSetorFilter] = useState<string>('all');
     const [choroplethMetric, setChoroplethMetric] = useState<Metric>('roi');
+    const [selectedInstallation, setSelectedInstallation] = useState<Installation | null>(null);
 
     const setores = useMemo(() => ['all', ...Array.from(new Set(installations.map(i => i.setor)))], [installations]);
 
@@ -54,14 +57,42 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
         return installations.filter(inst => inst.setor === setorFilter);
     }, [installations, setorFilter]);
 
+    const handleSelectInstallation = (installation: Installation) => {
+        setSelectedInstallation(installation);
+    };
+
+    const handleCloseDetails = () => {
+        setSelectedInstallation(null);
+    };
+
     const renderView = () => {
         switch (activeView) {
             case 'map':
-                return <InteractiveMap installations={filteredInstallations} />;
+                return (
+                    <InteractiveMap
+                        installations={installations}
+                        activeSector={setorFilter}
+                        onSectorSelect={setSetorFilter}
+                        onInstallationSelect={handleSelectInstallation}
+                    />
+                );
             case 'table':
-                return <InstallationTable installations={filteredInstallations} />;
+                return <InstallationTable installations={filteredInstallations} onInstallationSelect={handleSelectInstallation} />;
             case 'choropleth':
                 return <ChoroplethMap installations={filteredInstallations} metric={choroplethMetric} />;
+            case 'treemap':
+                return <TreemapChart installations={filteredInstallations} />;
+            case 'potential':
+                return (
+                    <div className="h-[600px] w-full">
+                        <iframe
+                            src="https://solar-potential-296769475687.us-central1.run.app/?_gl=1*18mi7yb*_ga*MTY5NDAwMTc0MC4xNzU5MzM0NzM5*_ga_NRWSTWS78N*czE3NTkzMzQ3MzkkbzEkZzAkdDE3NTkzMzQ3NDIkajU3JGwwJGgw"
+                            title="Potencial Solar"
+                            className="w-full h-full border-0 rounded-lg"
+                            allowFullScreen
+                        ></iframe>
+                    </div>
+                );
             default:
                 return <div className="text-center p-8">Selecione uma visualização.</div>;
         }
@@ -104,6 +135,8 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
                            <ViewButton label="Tabela" icon={TableIcon} isActive={activeView === 'table'} onClick={() => setActiveView('table')} />
                            <ViewButton label="Mapa" icon={MapIcon} isActive={activeView === 'map'} onClick={() => setActiveView('map')} />
                            <ViewButton label="Calor" icon={ChartAreaIcon} isActive={activeView === 'choropleth'} onClick={() => setActiveView('choropleth')} />
+                           <ViewButton label="Treemap" icon={ThIcon} isActive={activeView === 'treemap'} onClick={() => setActiveView('treemap')} />
+                           <ViewButton label="Potencial" icon={SunIcon} isActive={activeView === 'potential'} onClick={() => setActiveView('potential')} />
                         </div>
                         
                         {activeView === 'choropleth' && choroplethControls}
@@ -114,6 +147,13 @@ const InstallationsTab: React.FC<InstallationsTabProps> = ({ installations }) =>
             <div className="bg-white dark:bg-dark-card p-4 sm:p-6 rounded-lg shadow-md">
                 {renderView()}
             </div>
+            
+            {selectedInstallation && (
+                <InstallationDetails
+                    installation={selectedInstallation}
+                    onClose={handleCloseDetails}
+                />
+            )}
         </section>
     );
 };

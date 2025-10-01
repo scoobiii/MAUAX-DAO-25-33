@@ -26,7 +26,10 @@ const SortableHeader: React.FC<{
     );
 };
 
-const InstallationTable: React.FC<{ installations: Installation[] }> = ({ installations }) => {
+const InstallationTable: React.FC<{ 
+    installations: Installation[];
+    onInstallationSelect: (installation: Installation) => void;
+}> = ({ installations, onInstallationSelect }) => {
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'roi', direction: 'descending' });
 
     const sortedInstallations = useMemo(() => {
@@ -84,7 +87,7 @@ const InstallationTable: React.FC<{ installations: Installation[] }> = ({ instal
                 </thead>
                 <tbody className="bg-white dark:bg-dark-card divide-y divide-gray-200 dark:divide-gray-700">
                     {sortedInstallations.map((inst) => (
-                        <tr key={inst.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <tr key={inst.id} onClick={() => onInstallationSelect(inst)} className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                             <td className="p-3 whitespace-nowrap text-sm font-mono">{inst.id}</td>
                             <td className="p-3 whitespace-nowrap text-sm">{inst.setor}</td>
                             <td className="p-3 whitespace-nowrap text-sm">{inst.tamanho}</td>
